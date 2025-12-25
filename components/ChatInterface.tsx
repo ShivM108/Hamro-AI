@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, User, ChevronDown, MoreHorizontal, Trash2, Settings, AlertCircle, RefreshCw, LayoutList, X, Plus, FileText, File, Folder, Paperclip } from 'lucide-react';
+import { Sparkles, Send, User, ChevronDown, MoreHorizontal, Trash2, Settings, AlertCircle, RefreshCw, LayoutList, X, Plus, FileText, File, Folder, Paperclip, Key } from 'lucide-react';
 import { Message, LoadingState, Attachment } from '../types';
 import { sendMessage, summarizeConversation, AVAILABLE_MODELS, clearHistory } from '../services/geminiService';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -61,7 +60,6 @@ const ChatInterface: React.FC = () => {
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    // FIX: Cast the result of Array.from to File[] to ensure the compiler knows the items have File properties
     const files = Array.from(e.target.files || []) as File[];
     if (files.length === 0) return;
 
@@ -90,7 +88,6 @@ const ChatInterface: React.FC = () => {
             isInline: false
           });
         } else {
-          // Treat as text files for source code, md, txt, etc.
           const text = await file.text();
           newAttachments.push({
             name: file.name,
@@ -112,6 +109,12 @@ const ChatInterface: React.FC = () => {
 
   const removeAttachment = (index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateKey = async () => {
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+    }
   };
 
   const handleSend = async (overrideValue?: string) => {
@@ -146,13 +149,25 @@ const ChatInterface: React.FC = () => {
       };
       setMessages((prev) => [...prev, aiMsg]);
     } catch (error: any) {
+      const errorText = error.message || "";
+      let friendlyMsg = "An unexpected error occurred.";
+      let isKeyError = false;
+
+      if (errorText.includes("KEY_CONFIG_ERROR") || errorText.includes("AUTH_ERROR")) {
+        friendlyMsg = "It looks like there's an issue with your API key configuration. Ensure your selected project has billing enabled and the Gemini API is active.";
+        isKeyError = true;
+      } else if (errorText.includes("QUOTA_ERROR")) {
+        friendlyMsg = "You've reached your API quota. Please try again in a few moments.";
+      }
+
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'model',
-        content: error.message || "An unexpected error occurred.",
+        content: friendlyMsg,
         timestamp: new Date(),
         isError: true,
       };
+      
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setLoadingState(LoadingState.IDLE);
@@ -224,6 +239,9 @@ const ChatInterface: React.FC = () => {
                              <button onClick={handleSummarize} className="flex items-center gap-2.5 px-3 py-1.5 text-sm text-[#37352f] hover:bg-[#efefed]">
                                 <LayoutList size={16} /> Summarize chat
                              </button>
+                             <button onClick={handleUpdateKey} className="flex items-center gap-2.5 px-3 py-1.5 text-sm text-[#37352f] hover:bg-[#efefed]">
+                                <Key size={16} /> Change API Key
+                             </button>
                              <button onClick={handleClearChat} className="flex items-center gap-2.5 px-3 py-1.5 text-sm text-[#37352f] hover:bg-[#efefed]">
                                 <Trash2 size={16} /> Clear history
                              </button>
@@ -262,9 +280,29 @@ const ChatInterface: React.FC = () => {
                   {msg.role === 'user' ? 'You' : 'Hamro AI'}
                 </div>
                 
-                <div className={`py-3 px-4 rounded-lg text-[15px] ${msg.role === 'user' ? 'bg-[#f7f7f5] text-[#37352f]' : 'bg-transparent text-[#37352f] w-full'} ${msg.isError ? 'bg-red-50 text-red-800 border border-red-200' : ''}`}>
+                <div className={`py-3 px-4 rounded-lg text-[15px] ${msg.role === 'user' ? 'bg-[#f7f7f5] text-[#37352f]' : 'bg-transparent text-[#37352f] w-full'} ${msg.isError ? 'bg-red-50 text-red-800 border border-red-200 shadow-sm' : ''}`}>
                     <MarkdownRenderer content={msg.content} />
                     
+                    {msg.isError && (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button 
+                          onClick={() => {
+                            const lastUser = [...messages].reverse().find(m => m.role === 'user');
+                            if (lastUser) handleSend(lastUser.content);
+                          }}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-md text-xs font-semibold transition-colors"
+                        >
+                          <RefreshCw size={14} /> Retry Message
+                        </button>
+                        <button 
+                          onClick={handleUpdateKey}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-700 rounded-md text-xs font-semibold transition-colors"
+                        >
+                          <Key size={14} /> Re-configure API Key
+                        </button>
+                      </div>
+                    )}
+
                     {msg.attachments && msg.attachments.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {msg.attachments.map((at, idx) => (
@@ -371,7 +409,6 @@ const ChatInterface: React.FC = () => {
 
             <div className="h-4 w-px bg-gray-200 mx-1" />
 
-            {/* Hidden File Inputs */}
             <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileChange} />
             <input type="file" ref={folderInputRef} className="hidden" webkitdirectory="" mozdirectory="" directory="" onChange={handleFileChange} />
 

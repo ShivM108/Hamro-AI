@@ -29,7 +29,7 @@ Block types:
 - Citations: [^URL]
 
 <context>
-The current user's name is: Mars
+The current user's name is: Shiv
 The current user's email is: shivmehra1008@gmail.com
 The current Notion workspace's name is: Hamro AI
 </context>

@@ -1,19 +1,11 @@
 import React from 'react';
 import { Search, Home, Settings, Plus, MessageSquare, Clock, Star } from 'lucide-react';
+import HamroLogo from './HamroLogo';
 
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
 }
-
-// Custom Himalayan Brand Logo (Duplicated for portability)
-const HamroLogo = ({ className = "w-6 h-6" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    <path d="M15.5 8.5L21.5 21.5H13L15.5 8.5Z" fill="currentColor" fillOpacity="0.4" />
-    <path d="M10.5 2.5L2.5 21.5H18L10.5 2.5Z" fill="currentColor" />
-    <path d="M10.5 2.5L13.2 8.5H7.8L10.5 2.5Z" fill="white" />
-  </svg>
-);
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   return (
